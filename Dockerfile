@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21.0.5_11-jre-noble
+FROM eclipse-temurin:21.0.5_11-jre-alpine
 
 ARG BUILD_DATE
 ARG TACHIDESK_RELEASE_TAG
@@ -22,29 +22,20 @@ LABEL maintainer="suwayomi" \
       org.opencontainers.image.licenses="MPL-2.0"
 
 # Install envsubst from GNU's gettext project
-RUN apt-get update && \
-    apt-get -y install gettext-base && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
 # install unzip to unzip the server-reference.conf from the jar
-RUN apt-get update && \
-    apt-get -y install -y unzip && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache iptables gettext unzip curl
 
 # Create a user to run as
-RUN userdel -r ubuntu
-RUN groupadd --gid 1000 suwayomi && \
-    useradd  --uid 1000 --gid suwayomi --no-log-init suwayomi && \
+RUN addgroup -g 1000 suwayomi && \
+    adduser  -u 1000 -G suwayomi -h /home/suwayomi -D suwayomi && \
     mkdir -p /home/suwayomi/.local/share/Tachidesk
 
 WORKDIR /home/suwayomi
 
 # Copy the app into the container
-RUN curl -s --create-dirs -L $TACHIDESK_RELEASE_DOWNLOAD_URL -o /home/suwayomi/startup/tachidesk_latest.jar
-COPY scripts/create_server_conf.sh /home/suwayomi/create_server_conf.sh
-COPY scripts/startup_script.sh /home/suwayomi/startup_script.sh
+RUN curl -sSL $TACHIDESK_RELEASE_DOWNLOAD_URL -o tachidesk_latest.jar
+COPY scripts/create_server_conf.sh create_server_conf.sh
+COPY scripts/startup_script.sh startup_script.sh
 
 # update permissions of files.
 # we grant o+rwx because we need to allow non default UIDs (eg via docker run ... --user)
